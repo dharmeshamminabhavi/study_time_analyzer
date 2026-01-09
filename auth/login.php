@@ -1,8 +1,8 @@
 <?php
 include("../db/config.php");
 
-if (isset($_SESSION['student_id'])) {//check logged in
-    header("Location: ../dashboard.php");//redirect
+if (isset($_SESSION['student_id'])) {
+    header("Location: ../dashboard.php");
     exit;
 }
 
