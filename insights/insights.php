@@ -20,21 +20,51 @@ function formatDuration($seconds) {
 }
 
 //study days
-$query_days = "
-SELECT DISTINCT DATE(start_time) AS study_date
-FROM study_sessions ss
-JOIN subjects s ON ss.subject_id = s.subject_id
-WHERE s.student_id = $student_id
-AND start_time >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-";
+$first_study_row = $conn->query("
+    SELECT MIN(DATE(start_time)) AS first_day
+    FROM study_sessions ss
+    JOIN subjects s ON ss.subject_id = s.subject_id
+    WHERE s.student_id = $student_id
+")->fetch_assoc();
 
-$studied_days_week = $conn->query($query_days)->num_rows;//count
+$first_study_date = $first_study_row['first_day'];
 
-if ($studied_days_week < 5) {
-    $insights[] = "⚠️ Your study consistency dropped this week. You studied on only <b>$studied_days_week</b> days.";
-} else {
-    $insights[] = "✅ Good consistency! You studied regularly this week.";
+if (!$first_study_date) {
+
+    $studied_days_week = 0;
+    $possible_days_week = 0;
+    $weekly_consistency_percent = 0;
+
+    $insights[] = "ℹ️ Start your first study session to track weekly consistency.";
 }
+else {
+
+    $seven_days_ago = date("Y-m-d", strtotime("-6 days"));
+
+    
+    $week_start_date = ($first_study_date > $seven_days_ago)
+        ? $first_study_date
+        : $seven_days_ago;
+    $studied_days_week = $conn->query("
+        SELECT COUNT(DISTINCT DATE(ss.start_time)) AS total
+        FROM study_sessions ss
+        JOIN subjects s ON ss.subject_id = s.subject_id
+        WHERE s.student_id = $student_id
+        AND DATE(ss.start_time) >= '$week_start_date'
+    ")->fetch_assoc()['total'];
+    $possible_days_week =
+        floor((strtotime($today) - strtotime($week_start_date)) / 86400) + 1;
+    $weekly_consistency_percent =
+        round(($studied_days_week / $possible_days_week) * 100);
+    if ($weekly_consistency_percent < 70) {
+        $insights[] =
+            "⚠️ Weekly consistency dropped: studied on <b>$studied_days_week</b> out of <b>$possible_days_week</b> days.";
+    } else {
+        $insights[] =
+            "✅ Good weekly consistency: studied on <b>$studied_days_week</b> out of <b>$possible_days_week</b> days.";
+    }
+}
+
 
 //not studied
 $subjects = $conn->query("
@@ -414,10 +444,10 @@ new Chart(document.getElementById('hourlyChart'), {
             data: <?php echo json_encode($hour_values); ?>,
             backgroundColor: <?php
                 echo json_encode(array_map(function ($v) {
-                    if ($v == 0) return '#e9ecef';     // no study
-                    if ($v < 20) return '#b6d4fe';    // low
-                    if ($v < 40) return '#6ea8fe';    // medium
-                    return '#0d6efd';                 // high
+                    if ($v == 0) return '#e9ecef';     
+                    if ($v < 20) return '#b6d4fe';    
+                    if ($v < 40) return '#6ea8fe';    
+                    return '#0d6efd';                 
                 }, $hour_values));
             ?>
         }]
