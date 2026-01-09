@@ -1,3 +1,7 @@
+email:dharmeshamminabhavi001@gmail.com
+password:12345678
+
+
 Study Time Analyzer & Focus Insight Tool
 
 The Study Time Analyzer & Focus Insight Tool is a web-based application designed to help students track their study sessions, analyze study patterns, and gain insights to improve focus and consistency.
